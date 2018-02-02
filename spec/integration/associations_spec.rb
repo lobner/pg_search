@@ -131,7 +131,7 @@ describe PgSearch do
 
         results = ModelWithHasMany
                   .limit(1)
-                  .order("#{ModelWithHasMany.quoted_table_name}.id ASC")
+                  .order(Arel.sql("#{ModelWithHasMany.quoted_table_name}.id ASC"))
                   .with_associated('foo bar')
 
         expect(results.map(&:title)).to match_array(included.map(&:title))
@@ -283,7 +283,7 @@ describe PgSearch do
           include PgSearch
           belongs_to :another_model, :class_name => 'AssociatedModel'
 
-          pg_search_scope :with_associated, :associated_against => {:another_model => [:title, :author]}
+          pg_search_scope :with_associated, :associated_against => {:another_model => %i[title author]}
         end
       end
 
@@ -454,7 +454,7 @@ describe PgSearch do
 
       model do
         include PgSearch
-        pg_search_scope :search, :against => :title, :using => [:tsearch, :trigram]
+        pg_search_scope :search, :against => :title, :using => %i[tsearch trigram]
       end
     end
 
@@ -495,7 +495,7 @@ describe PgSearch do
 
       model do
         include PgSearch
-        pg_search_scope :search, :against => :title, :using => [:tsearch, :trigram]
+        pg_search_scope :search, :against => :title, :using => %i[tsearch trigram]
       end
     end
 

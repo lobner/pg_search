@@ -17,7 +17,7 @@ Metrics/BlockLength:
   Exclude:
     - spec/**/*
 
-Style/AlignParameters:
+Layout/AlignParameters:
   EnforcedStyle: with_fixed_indentation
 
 Style/HashSyntax:
@@ -34,7 +34,7 @@ Style/PercentLiteralDelimiters:
 Style/GuardClause:
   Enabled: false
 
-Style/VariableNumber:
+Naming/VariableNumber:
   EnforcedStyle: snake_case
 
 Bundler/OrderedGems:
@@ -45,3 +45,8 @@ Bundler/DuplicatedGem:
 
 Style/EmptyMethod:
   EnforcedStyle: expanded
+
+# Waiting on false positives to go away with:
+# https://github.com/bbatsov/rubocop/pull/5230
+Style/FormatStringToken:
+  Enabled: false

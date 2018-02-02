@@ -42,7 +42,7 @@ describe PgSearch::Multisearch::Rebuilder do
       end
 
       context "and multisearchable is conditional" do
-        [:if, :unless].each do |conditional_key|
+        %i[if unless].each do |conditional_key|
           context "via :#{conditional_key}" do
             with_model :Model do
               table do |t|
@@ -100,10 +100,10 @@ describe PgSearch::Multisearch::Rebuilder do
           end
 
           it "should execute the default SQL" do
-            time = DateTime.parse("2001-01-01")
+            time = Time.utc(2001, 1, 1, 0, 0, 0)
             rebuilder = PgSearch::Multisearch::Rebuilder.new(Model, -> { time })
 
-            # Handle change in precision of DateTime objects in SQL in Active Record 4.0.1
+            # Handle change in precision of Time objects in SQL in Active Record 4.0.1
             # https://github.com/rails/rails/commit/17f5d8e062909f1fcae25351834d8e89967b645e
             expected_timestamp = has_microsecond_precision? ? "2001-01-01 00:00:00.000000" : "2001-01-01 00:00:00"
 
@@ -145,10 +145,10 @@ describe PgSearch::Multisearch::Rebuilder do
             end
 
             it "generates SQL with the correct primary key" do
-              time = DateTime.parse("2001-01-01")
+              time = Time.utc(2001, 1, 1, 0, 0, 0)
               rebuilder = PgSearch::Multisearch::Rebuilder.new(ModelWithNonStandardPrimaryKey, -> { time })
 
-              # Handle change in precision of DateTime objects in SQL in Active Record 4.0.1
+              # Handle change in precision of Time objects in SQL in Active Record 4.0.1
               # https://github.com/rails/rails/commit/17f5d8e062909f1fcae25351834d8e89967b645e
               expected_timestamp = has_microsecond_precision? ? "2001-01-01 00:00:00.000000" : "2001-01-01 00:00:00"
 

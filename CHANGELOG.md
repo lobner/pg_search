@@ -1,12 +1,26 @@
 # pg_search changelog
 
+## 2.1.2
+
+*   Silence warnings in Rails 5.2.0.beta2 (Kevin Deisz)
+
+## 2.1.1
+
+*   Support snake_case ts_headline options again (with deprecation warning)
+
+## 2.1.0
+
+*   Allow ts_headline options to be passed to :highlight (Ian Heisters)
+*   Wait to load PgSearch::Document until after Active Record has loaded (Logan Leger)
+*   Add Rails version to generated migrations (Erik Eide)
+
 ## 2.0.1
 
 *   Remove require for generator that no longer exists. (Joshua Bartlett)
 
 ## 2.0.0
 
-*   Drop support for PostgreSQL < 9.2. 
+*   Drop support for PostgreSQL < 9.2.
 *   Drop support for Active Record < 4.2.
 *   Drop support for Ruby < 2.1.
 *   Improve performance of has_one and belongs_to associations. (Peter Postma)

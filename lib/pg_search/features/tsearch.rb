@@ -1,10 +1,11 @@
 require "active_support/core_ext/module/delegation"
+require 'active_support/deprecation'
 
 module PgSearch
   module Features
     class TSearch < Feature # rubocop:disable Metrics/ClassLength
       def self.valid_options
-        super + [:dictionary, :prefix, :negation, :any_word, :normalization, :tsvector_column, :highlight]
+        super + %i[dictionary prefix negation any_word normalization tsvector_column highlight]
       end
 
       def conditions
@@ -24,24 +25,71 @@ module PgSearch
       private
 
       def ts_headline
-        "ts_headline(#{dictionary.to_sql}, (#{document}), (#{tsquery}), '#{ts_headline_options}')"
+        Arel::Nodes::NamedFunction.new("ts_headline", [
+          dictionary,
+          arel_wrap(document),
+          arel_wrap(tsquery),
+          Arel::Nodes.build_quoted(ts_headline_options)
+        ]).to_sql
       end
 
       def ts_headline_options
-        return nil unless options[:highlight].is_a?(Hash)
+        return '' unless options[:highlight].is_a?(Hash)
 
-        headline_options = map_headline_options
-        headline_options.map{|key, value| "#{key} = #{value}" unless value.nil? }.compact.join(", ")
+        headline_options
+          .merge(deprecated_headline_options)
+          .map { |key, value| "#{key} = #{value}" unless value.nil? }
+          .compact
+          .join(", ")
       end
 
-      def map_headline_options
+      def headline_options
+        indifferent_options = options.with_indifferent_access
+
         %w[
           StartSel StopSel MaxFragments MaxWords MinWords ShortWord FragmentDelimiter HighlightAll
-        ].reduce({}) do |hash, name|
+        ].reduce({}) do |hash, key|
           hash.tap do
-            key = name.gsub(/([a-z])([A-Z])/, '\1_\2').downcase.to_sym
-            hash[name] = options[:highlight][key]
+            value = indifferent_options[:highlight][key]
+
+            hash[key] = ts_headline_option_value(value)
           end
+        end
+      end
+
+      def deprecated_headline_options
+        indifferent_options = options.with_indifferent_access
+
+        %w[
+          start_sel stop_sel max_fragments max_words min_words short_word fragment_delimiter highlight_all
+        ].reduce({}) do |hash, deprecated_key|
+          hash.tap do
+            value = indifferent_options[:highlight][deprecated_key]
+
+            unless value.nil?
+              key = deprecated_key.camelize
+
+              ActiveSupport::Deprecation.warn(
+                "pg_search 3.0 will no longer accept :#{deprecated_key} as an argument to :ts_headline, " \
+                "use :#{key} instead."
+              )
+
+              hash[key] = ts_headline_option_value(value)
+            end
+          end
+        end
+      end
+
+      def ts_headline_option_value(value)
+        case value
+        when String
+          %("#{value.gsub('"', '""')}")
+        when true
+          "TRUE"
+        when false
+          "FALSE"
+        else
+          value
         end
       end
 
@@ -117,7 +165,11 @@ module PgSearch
       end
 
       def tsearch_rank
-        "ts_rank((#{tsdocument}), (#{tsquery}), #{normalization})"
+        Arel::Nodes::NamedFunction.new("ts_rank", [
+          arel_wrap(tsdocument),
+          arel_wrap(tsquery),
+          normalization
+        ]).to_sql
       end
 
       def dictionary

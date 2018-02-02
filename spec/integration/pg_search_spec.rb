@@ -160,7 +160,7 @@ describe "an Active Record model which includes PgSearch" do
           expect(results.first.attributes.key?('content')).to eq false
 
           expect(results.select { |record| record.title == "bar" }).to eq [included]
-          expect(results.select { |record| record.title != "bar" }).to be_empty
+          expect(results.reject { |record| record.title == "bar" }).to be_empty
         end
       end
 
@@ -177,7 +177,7 @@ describe "an Active Record model which includes PgSearch" do
           expect(results.first.attributes.key?('content')).to eq false
 
           expect(results.select { |record| record.title == "bar" }).to eq [included]
-          expect(results.select { |record| record.title != "bar" }).to be_empty
+          expect(results.reject { |record| record.title == "bar" }).to be_empty
         end
       end
 
@@ -194,7 +194,7 @@ describe "an Active Record model which includes PgSearch" do
           expect(results.first.attributes.key?('content')).to eq false
 
           expect(results.select { |record| record.title == "bar" }).to eq [included]
-          expect(results.select { |record| record.title != "bar" }).to be_empty
+          expect(results.reject { |record| record.title == "bar" }).to be_empty
         end
       end
 
@@ -465,7 +465,7 @@ describe "an Active Record model which includes PgSearch" do
             # WARNING: searching timestamps is not something PostgreSQL
             # full-text search is good at. Use at your own risk.
             pg_search_scope :search_timestamps,
-              :against => [:created_at, :updated_at]
+              :against => %i[created_at updated_at]
           end
         end
 
@@ -481,7 +481,7 @@ describe "an Active Record model which includes PgSearch" do
 
     context "against multiple columns" do
       before do
-        ModelWithPgSearch.pg_search_scope :search_title_and_content, :against => [:title, :content]
+        ModelWithPgSearch.pg_search_scope :search_title_and_content, :against => %i[title content]
       end
 
       it "returns rows whose columns contain all of the terms in the query across columns" do
@@ -520,7 +520,7 @@ describe "an Active Record model which includes PgSearch" do
 
     context "using trigram" do
       before do
-        ModelWithPgSearch.pg_search_scope :with_trigrams, :against => [:title, :content], :using => :trigram
+        ModelWithPgSearch.pg_search_scope :with_trigrams, :against => %i[title content], :using => :trigram
       end
 
       it "returns rows where one searchable column and the query share enough trigrams" do
@@ -537,8 +537,8 @@ describe "an Active Record model which includes PgSearch" do
 
       context "when a threshold is specified" do
         before do
-          ModelWithPgSearch.pg_search_scope :with_strict_trigrams, :against => [:title, :content], :using => {trigram: {threshold: 0.5}}
-          ModelWithPgSearch.pg_search_scope :with_permissive_trigrams, :against => [:title, :content], :using => {trigram: {threshold: 0.1}}
+          ModelWithPgSearch.pg_search_scope :with_strict_trigrams, :against => %i[title content], :using => {trigram: {threshold: 0.5}}
+          ModelWithPgSearch.pg_search_scope :with_permissive_trigrams, :against => %i[title content], :using => {trigram: {threshold: 0.1}}
         end
 
         it "uses the threshold in the trigram expression" do
@@ -643,12 +643,12 @@ describe "an Active Record model which includes PgSearch" do
               :using => {
                 :tsearch => {
                   :highlight => {
-                    :start_sel => '<mark>',
-                    :stop_sel => '</mark>',
-                    :fragment_delimiter => '<delim>',
-                    :max_fragments => 2,
-                    :max_words => 2,
-                    :min_words => 1
+                    :StartSel => '<mark class="highlight">',
+                    :StopSel => '</mark>',
+                    :FragmentDelimiter => '<delim class="my_delim">',
+                    :MaxFragments => 2,
+                    :MaxWords => 2,
+                    :MinWords => 1
                   }
                 }
               }
@@ -657,7 +657,7 @@ describe "an Active Record model which includes PgSearch" do
           it "applies the options to the excerpts" do
             result = ModelWithPgSearch.search_content("Let").with_pg_search_highlight.first
 
-            expect(result.pg_search_highlight).to eq("<mark>Let</mark> text<delim><mark>Let</mark> text")
+            expect(result.pg_search_highlight).to eq(%(<mark class="highlight">Let</mark> text<delim class="my_delim"><mark class="highlight">Let</mark> text))
           end
         end
       end
@@ -771,7 +771,7 @@ describe "an Active Record model which includes PgSearch" do
         end
 
         it "returns all results containing any word in their title" do
-          numbers = %w[one two three four].map{|number| ModelWithPgSearch.create!(:title => number)}
+          numbers = %w[one two three four].map { |number| ModelWithPgSearch.create!(:title => number) }
 
           results = ModelWithPgSearch.search_title_with_any_word("one two three four")
 
@@ -839,7 +839,7 @@ describe "an Active Record model which includes PgSearch" do
     context "using dmetaphone" do
       before do
         ModelWithPgSearch.pg_search_scope :with_dmetaphones,
-          :against => [:title, :content],
+          :against => %i[title content],
           :using => :dmetaphone
       end
 
@@ -900,7 +900,7 @@ describe "an Active Record model which includes PgSearch" do
           ]
 
         ModelWithPgSearch.pg_search_scope :complex_search,
-          :against => [:content, :title],
+          :against => %i[content title],
           :ignoring => :accents,
           :using => {
             :tsearch => {:dictionary => 'english'},
@@ -1011,7 +1011,7 @@ describe "an Active Record model which includes PgSearch" do
         unexpected.comments.create(body: 'commentwo')
 
         Post.pg_search_scope :search_by_content_with_tsvector,
-          :associated_against => { comments: [:body] },
+          :associated_against => {comments: [:body]},
           :using => {
             :tsearch => {
               :tsvector_column => 'content_tsvector',
@@ -1162,8 +1162,8 @@ describe "an Active Record model which includes PgSearch" do
 
         multiplied_result =
           ModelWithPgSearch.search_content_with_importance_as_rank_multiplier("foo")
-          .with_pg_search_rank
-          .first
+            .with_pg_search_rank
+            .first
 
         multiplied_rank = multiplied_result.pg_search_rank
 
@@ -1271,8 +1271,8 @@ describe "an Active Record model which includes PgSearch" do
         ModelWithPgSearch.pg_search_scope :search_content_ranked_by_dmetaphone,
           :against => :content,
           :using => {
-            :tsearch => { :any_word => true, :prefix => true },
-            :dmetaphone => { :any_word => true, :prefix => true, :sort_only => true }
+            :tsearch => {:any_word => true, :prefix => true},
+            :dmetaphone => {:any_word => true, :prefix => true, :sort_only => true}
           },
           :ranked_by => ":tsearch + (0.5 * :dmetaphone)"
 

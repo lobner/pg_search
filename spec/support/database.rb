@@ -3,7 +3,7 @@ if defined? JRUBY_VERSION
   error_classes = [ActiveRecord::JDBCError]
 else
   require "pg"
-  error_classes = [PGError]
+  error_classes = [PG::Error]
 end
 
 error_classes << ActiveRecord::NoDatabaseError if defined? ActiveRecord::NoDatabaseError
@@ -42,7 +42,7 @@ def install_extension(name)
   extension = connection.execute "SELECT * FROM pg_catalog.pg_extension WHERE extname = '#{name}';"
   return unless extension.none?
   connection.execute "CREATE EXTENSION #{name};"
-rescue => exception
+rescue StandardError => exception
   at_exit do
     puts "-" * 80
     puts "Please install the #{name} extension"
@@ -54,7 +54,7 @@ end
 def install_extension_if_missing(name, query, expected_result)
   result = ActiveRecord::Base.connection.select_value(query)
   raise "Unexpected output for #{query}: #{result.inspect}" unless result.downcase == expected_result.downcase
-rescue
+rescue StandardError
   install_extension(name)
 end
 
